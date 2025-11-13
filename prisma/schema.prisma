@@ -1,0 +1,211 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//
+// ========== ENUMS ==========
+//
+
+enum UserRole {
+  OWNER
+  ADMIN
+  CASHIER
+}
+
+enum SyncType {
+  PUSH
+  PULL
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+  RETURN
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  QRIS
+  DEBIT
+  CREDIT
+  OTHER
+}
+
+enum TransactionStatus {
+  DRAFT
+  COMPLETED
+  CANCELED
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+//
+// ========== MODELS ==========
+//
+
+model User {
+  id        String   @id @default(uuid())
+  fullName  String
+  username  String   @unique
+  password  String
+  email     String?  @unique
+  phone     String?
+  role      UserRole @default(CASHIER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relasi
+  stores       Store[] // satu user bisa punya banyak store
+  shifts       Shift[]
+  transactions Transaction[]
+}
+
+model Store {
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  logoUrl   String?
+  currency  String   @default("IDR")
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categories   Category[]
+  products     Product[]
+  customers    Customer[]
+  shifts       Shift[]
+  transactions Transaction[]
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String
+  color     String?
+  icon      String?
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+}
+
+model Product {
+  id         String    @id @default(uuid())
+  name       String
+  sku        String?   @unique
+  barcode    String?   @unique
+  cost       Float
+  price      Float
+  stock      Int       @default(0)
+  imageUrl   String?
+  isActive   Boolean   @default(true)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  storeId    String
+  store      Store     @relation(fields: [storeId], references: [id])
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  transactionItems TransactionItem[]
+  stockMovements   StockMovement[]
+}
+
+model Transaction {
+  id            String            @id @default(uuid())
+  invoiceNumber String            @unique
+  storeId       String
+  store         Store             @relation(fields: [storeId], references: [id])
+  cashierId     String
+  cashier       User              @relation(fields: [cashierId], references: [id])
+  customerId    String?
+  customer      Customer?         @relation(fields: [customerId], references: [id])
+  paymentMethod PaymentMethod
+  totalAmount   Float
+  discount      Float?            @default(0)
+  tax           Float?            @default(0)
+  grandTotal    Float
+  status        TransactionStatus @default(COMPLETED)
+  isSynced      Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  transactionItems TransactionItem[]
+}
+
+model TransactionItem {
+  id            String      @id @default(uuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id])
+  quantity      Int
+  price         Float
+  subtotal      Float
+}
+
+model StockMovement {
+  id        String            @id @default(uuid())
+  productId String
+  product   Product           @relation(fields: [productId], references: [id])
+  quantity  Int
+  type      StockMovementType
+  note      String?
+  createdAt DateTime          @default(now())
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  points    Int      @default(0)
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
+}
+
+model Shift {
+  id             String      @id @default(uuid())
+  cashierId      String
+  cashier        User        @relation(fields: [cashierId], references: [id])
+  storeId        String
+  store          Store       @relation(fields: [storeId], references: [id])
+  openedAt       DateTime    @default(now())
+  closedAt       DateTime?
+  status         ShiftStatus @default(OPEN)
+  openingBalance Float       @default(0)
+  closingBalance Float?
+}
+
+model SyncLog {
+  id        String   @id @default(uuid())
+  type      SyncType
+  tableName String
+  recordId  String?
+  success   Boolean  @default(true)
+  message   String?
+  syncedAt  DateTime @default(now())
+}
