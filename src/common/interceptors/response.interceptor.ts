@@ -12,7 +12,9 @@ export class GlobalResponseInterceptor implements NestInterceptor {
     return next.handle().pipe(
       map((data) => {
         const response = context.switchToHttp().getResponse();
-        const statusCode = response.statusCode;
+        response.status(200);
+
+        const statusCode = 200;
 
         const messageMap: Record<number, string> = {
           200: 'Success',
@@ -24,11 +26,26 @@ export class GlobalResponseInterceptor implements NestInterceptor {
 
         const message = messageMap[statusCode] ?? 'Success';
 
+        // Cek apakah data sudah ada 'meta'
+        if (
+          data &&
+          typeof data === 'object' &&
+          'meta' in data &&
+          'data' in data
+        ) {
+          return {
+            success: true,
+            statusCode,
+            message,
+            ...data, // biarkan meta dan data apa adanya
+          };
+        }
+
         return {
           success: statusCode < 400,
           statusCode,
           message,
-          data: data?.data ?? data,
+          data,
         };
       }),
     );

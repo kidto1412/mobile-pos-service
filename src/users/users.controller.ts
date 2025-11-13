@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
@@ -28,6 +29,14 @@ export class UsersController {
   @Get()
   findAll() {
     return this.usersService.findAll();
+  }
+
+  @Get('pagination')
+  async getPagination(@Query('page') page = 1, @Query('size') size = 10) {
+    const pageNumber = Math.max(1, Number(page));
+    const pageSize = Math.max(1, Number(size));
+
+    return this.usersService.getPagination(pageNumber, pageSize);
   }
 
   @Get(':id')
