@@ -22,31 +22,24 @@ import { diskStorage, memoryStorage } from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { extname } from 'path';
 import * as fs from 'fs';
+import { UploadInterceptor } from 'src/common/interceptors/upload.interceptor';
+import { saveUploadedFile } from 'src/utils/upload-file.util';
 
 @Controller('store')
 export class StoreController {
   constructor(private readonly storeService: StoreService) {}
 
   @Post()
-  @UseInterceptors(
-    FileInterceptor('logo', {
-      storage: memoryStorage(),
-    }),
-  )
+  @UseInterceptors(UploadInterceptor('logo'))
   async created(
     @Body() dto: CreateStoreDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    if (file) {
-      dto.logoUrl = `/uploads/logos/${file.filename}`; // set path ke dto
-    }
-    // generate nama file
-    const filename = `${uuidv4()}${extname(file.originalname)}`;
-    const savePath = `./uploads/logos/${filename}`;
-    fs.writeFileSync(savePath, file.buffer);
+    const savedFile = saveUploadedFile('./uploads/logos', file);
 
-    // set ke dto
-    dto.logoUrl = `/uploads/logos/${filename}`;
+    if (savedFile) {
+      dto.logoUrl = savedFile.url;
+    }
 
     await this.storeService.create(dto);
     return CREATED;
@@ -71,7 +64,19 @@ export class StoreController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateStoreDto) {
+  @UseInterceptors(UploadInterceptor('logo'))
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateStoreDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    let newLogoUrl: string | undefined = undefined;
+    const savedFile = saveUploadedFile('./uploads/logos', file);
+
+    if (savedFile) {
+      dto.logoUrl = savedFile.url;
+    }
+
     await this.storeService.update(id, dto);
     return UPDATED;
   }
