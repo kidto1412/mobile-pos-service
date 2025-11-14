@@ -23,7 +23,7 @@ export class UsersController {
   @Post()
   async created(@Body() dto: CreateUserDto) {
     await this.usersService.create(dto);
-    return { data: CREATED };
+    return CREATED;
   }
 
   @Get()
@@ -47,12 +47,12 @@ export class UsersController {
   @Put(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     await this.usersService.update(id, dto);
-    return { data: UPDATED };
+    return UPDATED;
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string) {
     await this.usersService.remove(id);
-    return { data: DELETED };
+    return DELETED;
   }
 }

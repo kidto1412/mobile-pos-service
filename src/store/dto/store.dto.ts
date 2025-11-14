@@ -1,4 +1,10 @@
-import { isDateString, IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import {
+  isDateString,
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateStoreDto {
   @IsNotEmpty()
@@ -9,7 +15,7 @@ export class CreateStoreDto {
   @IsString()
   address: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   logoUrl: string;
 
